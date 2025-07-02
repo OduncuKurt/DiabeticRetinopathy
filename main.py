@@ -6,11 +6,12 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+import lightgbm as lgb
 
-st.title("🌲 Random Forest Gelişmiş Sınıflandırma Uygulaması")
+st.title("🌲 Random Forest ve LightGBM Sınıflandırma Karşılaştırması")
 st.markdown("""
-Bu uygulama, görsel tabanlı özelliklerden elde edilen verileri Random Forest algoritması kullanarak sınıflandırır.
-Test oranını ayarlayabilir, model başarısını anlık olarak inceleyebilirsiniz.
+Bu uygulama, görsel tabanlı özelliklerden elde edilen verileri Random Forest ve LightGBM algoritmaları kullanarak sınıflandırır.
+Test oranını ayarlayabilir, iki modelin başarısını anlık olarak inceleyebilirsiniz.
 """)
 
 # CSV Yükleme
@@ -38,45 +39,52 @@ if uploaded_file:
         test_size = st.slider("Test Veri Oranı (%)", min_value=10, max_value=50, value=20)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
 
-        # Parametre ayarlı model eğitimi
-        st.info("Random Forest Eğitiliyor...")
-        model = RandomForestClassifier(
+        # Random Forest Modeli
+        st.info("Random Forest eğitiliyor...")
+        rf_model = RandomForestClassifier(
             n_estimators=500,
-            max_depth=10,
+            max_depth=15,
             min_samples_split=4,
             max_features='sqrt',
             class_weight='balanced',
             random_state=42
         )
-        model.fit(X_train, y_train)
+        rf_model.fit(X_train, y_train)
+        y_pred_rf = rf_model.predict(X_test)
+        acc_rf = accuracy_score(y_test, y_pred_rf)
 
-        # Tahmin ve değerlendirme
-        y_pred = model.predict(X_test)
-        acc = accuracy_score(y_test, y_pred)
+        st.success(f"🌲 Random Forest Doğruluk Oranı: {acc_rf:.4f}")
 
-        st.success(f"✅ Model Doğruluk Oranı (Accuracy): {acc:.4f}")
-
-        st.write("### 📄 Sınıflandırma Raporu")
-        st.text(classification_report(y_test, y_pred))
-
-        st.write("### 🔥 Karışıklık Matrisi")
-        cm = confusion_matrix(y_test, y_pred)
+        st.write("### 🔥 Random Forest Karışıklık Matrisi")
+        cm_rf = confusion_matrix(y_test, y_pred_rf)
         labels = sorted(np.unique(y))
+        fig_rf, ax_rf = plt.subplots(figsize=(6, 4))
+        sns.heatmap(cm_rf, annot=True, fmt='d', cmap='Greens', xticklabels=labels, yticklabels=labels, ax=ax_rf)
+        ax_rf.set_title("Random Forest Confusion Matrix")
+        st.pyplot(fig_rf)
 
-        fig, ax = plt.subplots(figsize=(8, 6))
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels, ax=ax)
-        plt.xlabel("Tahmin Edilen Sınıf")
-        plt.ylabel("Gerçek Sınıf")
-        plt.title("Karışıklık Matrisi (Confusion Matrix)")
-        st.pyplot(fig)
+        # LightGBM Modeli
+        st.info("LightGBM eğitiliyor...")
+        lgb_model = lgb.LGBMClassifier(
+            n_estimators=1500,
+            max_depth=-1,
+            learning_rate=0.03,
+            num_leaves=50,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            class_weight='balanced',
+            random_state=42
+        )
+        lgb_model.fit(X_train, y_train)
+        y_pred_lgb = lgb_model.predict(X_test)
+        acc_lgb = accuracy_score(y_test, y_pred_lgb)
 
-        # Özellik Önem Grafiği
-        st.write("### 📌 Özellik Önem Grafiği")
-        importances = model.feature_importances_
-        feature_imp_df = pd.DataFrame({'Özellik': selected_features, 'Önem Skoru': importances})
-        feature_imp_df = feature_imp_df.sort_values(by='Önem Skoru', ascending=False)
+        st.success(f"⚡ LightGBM Doğruluk Oranı: {acc_lgb:.4f}")
 
-        fig2, ax2 = plt.subplots(figsize=(8, 4))
-        sns.barplot(x='Önem Skoru', y='Özellik', data=feature_imp_df, ax=ax2)
-        ax2.set_title("Özelliklerin Göreli Önemi")
-        st.pyplot(fig2)
+        st.write("### 🔥 LightGBM Karışıklık Matrisi")
+        cm_lgb = confusion_matrix(y_test, y_pred_lgb)
+        fig_lgb, ax_lgb = plt.subplots(figsize=(6, 4))
+        sns.heatmap(cm_lgb, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels, ax=ax_lgb)
+        ax_lgb.set_title("LightGBM Confusion Matrix")
+        st.pyplot(fig_lgb)
+
