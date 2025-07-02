@@ -10,7 +10,7 @@ import lightgbm as lgb
 
 st.title("🌲 Random Forest ve LightGBM Sınıflandırma Uygulaması (Yeni Veri Yapısı)")
 st.markdown("""
-Bu uygulama, yüklediğiniz veri dosyasından özellik çıkarımı yaparak Random Forest ve LightGBM algoritmaları ile sınıflandırma işlemi gerçekleştirir.
+Bu uygdenemeulama, yüklediğiniz veri dosyasından özellik çıkarımı yaparak Random Forest ve LightGBM algoritmaları ile sınıflandırma işlemi gerçekleştirir.
 """)
 
 # CSV Yükleme
@@ -29,7 +29,15 @@ if uploaded_file:
         feature_columns = [col for col in df.columns if col not in ['filename', 'label']]
 
         st.sidebar.header("Özellik Seçimi")
-        selected_features = st.sidebar.multiselect("Kullanılacak Özellikler", options=feature_columns, default=feature_columns)
+
+        # Önlem: Varsayılan listeyi yalnızca mevcut kolonlarla sınırlıyoruz
+        default_valid_features = [col for col in feature_columns if col in df.columns]
+
+        selected_features = st.sidebar.multiselect(
+            "Kullanılacak Özellikler", 
+            options=feature_columns, 
+            default=default_valid_features
+        )
 
         if not selected_features:
             st.error("En az bir özellik seçmelisiniz.")
